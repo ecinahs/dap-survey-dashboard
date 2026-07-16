@@ -113,6 +113,39 @@
   .kpi-value { font-size: 24px; font-weight: 600; margin: 0; line-height: 1.1; }
   .kpi-sub { font-size: 11.5px; color: var(--text-muted); margin: 4px 0 0; }
   .kpi-note { font-size: 11.5px; color: var(--text-muted); margin: 8px 2px 0; }
+  .kpi-hint { font-size: 11.5px; color: var(--text-muted); margin: -4px 0 10px; }
+
+  /* Clickable stage cards + drill-down panel */
+  .kpi-card-btn {
+    cursor: pointer; font: inherit; color: inherit; text-align: left; width: 100%;
+    transition: background 100ms ease, border-color 100ms ease;
+  }
+  .kpi-card-btn:hover { background: color-mix(in srgb, var(--accent) 8%, var(--surface-1)); }
+  .kpi-card-btn.active {
+    border-color: var(--accent);
+    background: color-mix(in srgb, var(--accent) 12%, var(--surface-1));
+  }
+  .stage-detail {
+    display: none; margin-top: 12px; background: var(--surface-1); border: 1px solid var(--border-ring);
+    border-radius: 12px; padding: 14px 16px;
+  }
+  .stage-detail.show { display: block; }
+  .stage-detail-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px; gap: 12px; }
+  .stage-detail-head h3 { font-size: 13px; font-weight: 600; margin: 0; }
+  .stage-detail-head .count { font-size: 12px; color: var(--text-muted); }
+  .stage-close {
+    all: unset; cursor: pointer; font-size: 12px; color: var(--text-secondary);
+    padding: 4px 8px; border-radius: 6px;
+  }
+  .stage-close:hover { background: var(--track); }
+  .stage-list { list-style: none; margin: 0; padding: 0; }
+  .stage-list li {
+    display: flex; align-items: center; justify-content: space-between; gap: 12px;
+    padding: 7px 0; border-bottom: 1px solid var(--gridline); font-size: 12.5px;
+  }
+  .stage-list li:last-child { border-bottom: none; }
+  .stage-list .stage-name { color: var(--text-primary); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .stage-list .stage-div { color: var(--text-muted); flex: 0 0 auto; font-variant-numeric: tabular-nums; }
 
   /* shared tooltip */
   #tooltip {
@@ -131,7 +164,7 @@
   <div class="wrap">
     <header class="top">
       <h1>DAP Survey Dashboard</h1>
-      <p class="subtitle">13 respondents · submitted 13&ndash;15 Jul 2026 · aggregated view (no respondent-level data)</p>
+      <p class="subtitle">13 respondents · submitted 13&ndash;15 Jul 2026 · names shown, no email addresses</p>
     </header>
 
     <section class="tiles" aria-label="Summary metrics">
@@ -162,8 +195,9 @@
         <h2>DAP readiness</h2>
         <p class="cap">dap_stage &middot; 13 respondents</p>
       </div>
+      <p class="kpi-hint">Click a card to expand and see respondent names and divisions</p>
       <div class="kpi-row">
-        <div class="kpi-card" style="--accent: var(--ord-1)">
+        <button class="kpi-card kpi-card-btn" data-stage="Exploring Possibilities" style="--accent: var(--ord-1)" aria-expanded="false" aria-controls="stageDetail">
           <div class="kpi-visual">
             <div class="kpi-ring">
               <svg class="ring-svg" viewBox="0 0 44 44" aria-hidden="true">
@@ -181,8 +215,8 @@
             <p class="kpi-value">7</p>
             <p class="kpi-sub">out of 13 respondents</p>
           </div>
-        </div>
-        <div class="kpi-card" style="--accent: var(--ord-2)">
+        </button>
+        <button class="kpi-card kpi-card-btn" data-stage="Ready to Onboard" style="--accent: var(--ord-2)" aria-expanded="false" aria-controls="stageDetail">
           <div class="kpi-visual">
             <div class="kpi-ring">
               <svg class="ring-svg" viewBox="0 0 44 44" aria-hidden="true">
@@ -200,8 +234,8 @@
             <p class="kpi-value">3</p>
             <p class="kpi-sub">out of 13 respondents</p>
           </div>
-        </div>
-        <div class="kpi-card" style="--accent: var(--ord-3)">
+        </button>
+        <button class="kpi-card kpi-card-btn" data-stage="Growing with DAP" style="--accent: var(--ord-3)" aria-expanded="false" aria-controls="stageDetail">
           <div class="kpi-visual">
             <div class="kpi-ring">
               <svg class="ring-svg" viewBox="0 0 44 44" aria-hidden="true">
@@ -219,7 +253,15 @@
             <p class="kpi-value">3</p>
             <p class="kpi-sub">out of 13 respondents</p>
           </div>
+        </button>
+      </div>
+      <div class="stage-detail" id="stageDetail">
+        <div class="stage-detail-head">
+          <h3 id="stageDetailTitle">Exploring Possibilities</h3>
+          <span class="count" id="stageDetailCount"></span>
+          <button class="stage-close" id="stageDetailClose">Close</button>
         </div>
+        <ul class="stage-list" id="stageDetailList"></ul>
       </div>
     </section>
 
@@ -317,7 +359,7 @@
     </div>
 
     <footer class="note">
-      Source: internal DAP readiness &amp; capability survey &middot; 1 test submission excluded &middot; respondent-level detail omitted from this public view.
+      Source: internal DAP readiness &amp; capability survey &middot; 1 test submission excluded &middot; DAP readiness cards show first-name-style usernames only, no email addresses or domains.
     </footer>
   </div>
 </div>
@@ -326,6 +368,22 @@
 
 <script>
 (function () {
+  var respondents = [
+    { name: "tan_jian_jun", division: "RDD", stage: "Exploring Possibilities" },
+    { name: "mabel_soh", division: "PCD-TD", stage: "Ready to Onboard" },
+    { name: "karen_ng", division: "CDD-WDD", stage: "Exploring Possibilities" },
+    { name: "lu_caixia", division: "PCD-TD", stage: "Growing with DAP" },
+    { name: "desmond_ang", division: "CDD-HR", stage: "Growing with DAP" },
+    { name: "daniel_lee", division: "PCD-CPD", stage: "Exploring Possibilities" },
+    { name: "Athena_michael", division: "PCD-CPD", stage: "Ready to Onboard" },
+    { name: "jason_tan", division: "GITD", stage: "Growing with DAP" },
+    { name: "joanne_chan", division: "PCD-TD", stage: "Ready to Onboard" },
+    { name: "audrey_li", division: "JCDO", stage: "Exploring Possibilities" },
+    { name: "radraraavis", division: "PCD-CPD", stage: "Exploring Possibilities" },
+    { name: "esther_lok", division: "DEO", stage: "Exploring Possibilities" },
+    { name: "david_low", division: "Legal", stage: "Exploring Possibilities" }
+  ];
+
   var confidence = [
     { label: "Presenting", value: 3.1 },
     { label: "Spotting trends", value: 3.1 },
@@ -428,6 +486,64 @@
   renderBars("chartTools", tools, 5, true, true);
   renderBars("chartTopics", topics, 13, false, true);
   renderBars("chartDivision", division, 13, false, true);
+
+  var stageButtons = document.querySelectorAll(".kpi-card-btn[data-stage]");
+  var stageDetail = document.getElementById("stageDetail");
+  var stageDetailTitle = document.getElementById("stageDetailTitle");
+  var stageDetailCount = document.getElementById("stageDetailCount");
+  var stageDetailList = document.getElementById("stageDetailList");
+  var activeStageBtn = null;
+
+  function closeStageDetail() {
+    stageDetail.classList.remove("show");
+    if (activeStageBtn) {
+      activeStageBtn.classList.remove("active");
+      activeStageBtn.setAttribute("aria-expanded", "false");
+    }
+    activeStageBtn = null;
+  }
+
+  function openStageDetail(stageBtn) {
+    var stage = stageBtn.getAttribute("data-stage");
+    var matches = respondents
+      .filter(function (r) { return r.stage === stage; })
+      .slice()
+      .sort(function (a, b) { return a.division.localeCompare(b.division) || a.name.localeCompare(b.name); });
+
+    stageDetailTitle.textContent = stage;
+    stageDetailCount.textContent = matches.length + " respondent" + (matches.length === 1 ? "" : "s");
+    stageDetailList.innerHTML = "";
+    matches.forEach(function (r) {
+      var li = document.createElement("li");
+      var name = document.createElement("span");
+      name.className = "stage-name";
+      name.textContent = r.name;
+      var div = document.createElement("span");
+      div.className = "stage-div";
+      div.textContent = r.division;
+      li.appendChild(name);
+      li.appendChild(div);
+      stageDetailList.appendChild(li);
+    });
+
+    if (activeStageBtn) activeStageBtn.classList.remove("active");
+    stageBtn.classList.add("active");
+    stageBtn.setAttribute("aria-expanded", "true");
+    stageDetail.classList.add("show");
+    activeStageBtn = stageBtn;
+  }
+
+  stageButtons.forEach(function (stageBtn) {
+    stageBtn.addEventListener("click", function () {
+      if (activeStageBtn === stageBtn) {
+        closeStageDetail();
+      } else {
+        openStageDetail(stageBtn);
+      }
+    });
+  });
+
+  document.getElementById("stageDetailClose").addEventListener("click", closeStageDetail);
 })();
 </script>
 </body>
